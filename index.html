@@ -1,27 +1,41 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Kontrol Volume dengan Gesture</title>
-    <style>
-      body {
-        text-align: center;
-        background: #111;
-        color: white;
-        font-family: Arial;
-      }
-      h2 {
-        margin-top: 20px;
-      }
-      img {
-        border: 3px solid #0f0;
-        border-radius: 10px;
-        margin-top: 20px;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>🎵 Kontrol Volume dengan Jempol & Telunjuk</h2>
-    <p>Gerakkan jempol ↔ telunjuk untuk mengatur volume</p>
-    <img src="/video_feed" width="720" />
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kamera Web</title>
+</head>
+<body>
+  <h2>Akses Kamera via Browser</h2>
+  <video id="video" width="640" height="480" autoplay></video>
+  <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+  <button id="capture">Kirim ke Python</button>
+  <p id="result"></p>
+
+  <script>
+    // buka kamera user
+    const video = document.getElementById("video");
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      });
+
+    // tangkap frame dan kirim ke Flask
+    document.getElementById("capture").addEventListener("click", () => {
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataURL = canvas.toDataURL("image/jpeg");
+
+      fetch("/process_frame", {
+        method: "POST",
+        body: JSON.stringify({ image: dataURL }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("result").innerText = "Hasil: " + data.message;
+      });
+    });
+  </script>
+</body>
 </html>
