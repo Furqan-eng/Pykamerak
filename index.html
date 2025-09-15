@@ -1,41 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kamera Web</title>
+    <title>Kontrol Volume Gesture</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
-  <h2>Akses Kamera via Browser</h2>
-  <video id="video" width="640" height="480" autoplay></video>
-  <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
-  <button id="capture">Kirim ke Python</button>
-  <p id="result"></p>
+    <h2>Kontrol Volume dengan Gesture</h2>
+    <video id="video" autoplay playsinline width="300"></video>
+    <h3>Hasil:</h3>
+    <img id="output" width="300">
 
-  <script>
-    // buka kamera user
-    const video = document.getElementById("video");
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        video.srcObject = stream;
-      });
+    <script>
+        const video = document.getElementById('video');
+        const output = document.getElementById('output');
+        const socket = io();
 
-    // tangkap frame dan kirim ke Flask
-    document.getElementById("capture").addEventListener("click", () => {
-      const canvas = document.getElementById("canvas");
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataURL = canvas.toDataURL("image/jpeg");
+        // Akses kamera user
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            video.srcObject = stream;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
 
-      fetch("/process_frame", {
-        method: "POST",
-        body: JSON.stringify({ image: dataURL }),
-        headers: { "Content-Type": "application/json" }
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("result").innerText = "Hasil: " + data.message;
-      });
-    });
-  </script>
+            setInterval(() => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+                const dataURL = canvas.toDataURL('image/jpeg');
+                socket.emit('frame', dataURL);
+            }, 100); // kirim frame tiap 100ms
+        });
+
+        // terima hasil dari server
+        socket.on('processed_frame', data => {
+            output.src = data;
+        });
+    </script>
 </body>
 </html>
